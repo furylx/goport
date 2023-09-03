@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -36,7 +38,7 @@ func main() {
 			},
 		},
 		Action: func(cCtx *cli.Context) error {
-			var target string
+			var target net.IP
 			var ports []int
 			var mode string
 			if cCtx.String("ip") == "" {
@@ -164,18 +166,57 @@ func handlePorts(p string) ([]int, error) {
 
 // handleModes handles modes...
 func handleModes(m string) (string, error) {
-	fmt.Printf("handleModes: %v\n", m)
-	return "", nil
-
+	switch m {
+	case "stealth":
+		return m, nil
+	case "speed":
+		return m, nil
+	case "accuracy":
+		return m, nil
+	default:
+		return "", fmt.Errorf("<handleMdes> invalid mode specified: %v", m)
+	}
 }
 
 // handleTarget handles the target, if a URL is passed, the URL is resolved into an IPv4 address
-func handleTarget(t string) (string, error) {
-	fmt.Printf("handleTarget: %v\n", t)
-	return "", nil
+func handleTarget(t string) (net.IP, error) {
+	// fmt.Printf("handleTarget: %v\n", t)
+	if net.ParseIP(t) != nil {
+		ip := net.ParseIP(t)
+		return ip, nil
+	}
+	if !strings.HasPrefix(t, "http://") && !strings.HasPrefix(t, "https://") {
+		t = "http://" + t
+	}
+	u, err := url.Parse(t)
+	if err == nil && u.Host != "" {
+		resolvedIp, err := resolveDomain(u.Host)
+		if err != nil {
+			return nil, err
+		}
+		return resolvedIp, nil
+	}
+	return nil, fmt.Errorf("Not a valid IP or URL: %v", t)
 }
 
-func resolveDomain(d string) (string, error) {
-	var ip string
-	return ip, nil
+func resolveDomain(d string) (net.IP, error) {
+	ip, err := net.LookupIP(d)
+	if err != nil {
+		return nil, fmt.Errorf("<resolveDomain> could not look up: %v\terror: %v\n", d, err)
+	}
+	ipv4 := getIPv4(ip)
+	if ipv4 == nil {
+		return nil, fmt.Errorf("<reslveDomain> could not resolve: %v", d)
+	} else {
+		return ipv4, nil
+	}
+}
+
+func getIPv4(i []net.IP) net.IP {
+	for _, ip := range i {
+		if ipv4 := ip.To4(); ipv4 != nil {
+			return ipv4
+		}
+	}
+	return nil
 }
