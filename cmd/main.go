@@ -180,7 +180,6 @@ func handleModes(m string) (string, error) {
 
 // handleTarget handles the target, if a URL is passed, the URL is resolved into an IPv4 address
 func handleTarget(t string) (net.IP, error) {
-	// fmt.Printf("handleTarget: %v\n", t)
 	if net.ParseIP(t) != nil {
 		ip := net.ParseIP(t)
 		return ip, nil
@@ -199,6 +198,7 @@ func handleTarget(t string) (net.IP, error) {
 	return nil, fmt.Errorf("Not a valid IP or URL: %v", t)
 }
 
+// resolveDomain resolves the domain to an ip address, returns type net.IP
 func resolveDomain(d string) (net.IP, error) {
 	ip, err := net.LookupIP(d)
 	if err != nil {
@@ -212,6 +212,7 @@ func resolveDomain(d string) (net.IP, error) {
 	}
 }
 
+// getIPv4 returns the first ipv4 address from the []net.IP
 func getIPv4(i []net.IP) net.IP {
 	for _, ip := range i {
 		if ipv4 := ip.To4(); ipv4 != nil {
