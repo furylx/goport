@@ -77,14 +77,14 @@ func parseMultiPort(p string) ([]int, error) {
 }
 
 // parsePortRange extracts the range of ports and returns a slice of int containg all the ports from i - n
-func parsePortRange(p string) ([]int, error, error) {
+func parsePortRange(p string) ([]int, error) {
 	portRange := strings.Split(p, "-")
 	lower, err1 := strconv.Atoi(portRange[0])
 	upper, err2 := strconv.Atoi(portRange[1])
 
 	if err1 != nil || err2 != nil {
-		log.Fatalf("invalid port format: %v\t%v\terrors: %v\t%v\n", lower, upper, err1, err2)
-		return nil, err1, err2
+
+		return nil, fmt.Errorf("invalid port format: %v\t%v\terrors: %v\t%v\n", lower, upper, err1, err2)
 	}
 
 	var ports []int
@@ -94,14 +94,46 @@ func parsePortRange(p string) ([]int, error, error) {
 	}
 
 	fmt.Printf("parsingPortRange: %v\n", ports)
-	return ports, nil, nil
+	return ports, nil
 }
 
 // handlePorts is the wrapper function for the different inputs for the -p flag
 func handlePorts(p string) ([]int, error) {
 	fmt.Printf("handlePorts: %v\n", p)
-
-	return nil, nil
+	var ports []int
+	// All ports or default case
+	if p == "1-1024" {
+		ports, err := parsePortRange(p)
+		if err != nil {
+			return nil, err
+		}
+		return ports, nil
+	} else if p == "-" {
+		ports, err := parsePortRange("1-65535")
+		if err != nil {
+			return nil, err
+		}
+		return ports, nil
+	} else if strings.Contains(p, "-") {
+		ports, err := parsePortRange(p)
+		if err != nil {
+			return nil, err
+		}
+		return ports, nil
+	} else if strings.Contains(p, ",") {
+		ports, err := parseMultiPort(p)
+		if err != nil {
+			return nil, err
+		}
+		return ports, nil
+	} else {
+		single, err := parseSinglePort(p)
+		if err != nil {
+			return nil, err
+		}
+		ports = append(ports, single)
+		return ports, nil
+	}
 }
 
 // handleModes handles modes...
