@@ -113,6 +113,9 @@ func parsePortRange(p string) ([]int, error) {
 
 		return nil, fmt.Errorf("<parsePortRange> invalid port format: %v\terrors: %v\t%v\n", p, err1, err2)
 	}
+	if lower > upper {
+		upper, lower = lower, upper
+	}
 
 	var ports []int
 
