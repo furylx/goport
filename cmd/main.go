@@ -1,8 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/urfave/cli/v2"
 )
@@ -43,25 +46,72 @@ func main() {
 
 }
 
+// parseSinglePort extracts the port from the string, checks for errors, if none it returns the port as in
 func parseSinglePort(p string) (int, error) {
-
-	return 0, nil
+	fmt.Printf("parsingSinglePort: %v\n", p)
+	port, err := strconv.Atoi(p)
+	if err != nil {
+		log.Fatalf("invalid port format: %v\terror: %v\n", port, err)
+		return 0, err
+	}
+	return port, nil
 }
 
-func parsePortRange(p string) ([]int, error) {
+// parseMultiPort extracts multiple ports separated by commas and returns a slice of int containg the ports
+func parseMultiPort(p string) ([]int, error) {
+	portsRaw := strings.Split(p, ",")
 
-	return nil, nil
+	var ports []int
+
+	for _, i := range portsRaw {
+		port, err := parseSinglePort(i)
+
+		if err != nil {
+			log.Fatalf("invalid port format: %v\terror: %v", p, err)
+			return nil, err
+		}
+		ports = append(ports, port)
+	}
+
+	return ports, nil
 }
 
+// parsePortRange extracts the range of ports and returns a slice of int containg all the ports from i - n
+func parsePortRange(p string) ([]int, error, error) {
+	portRange := strings.Split(p, "-")
+	lower, err1 := strconv.Atoi(portRange[0])
+	upper, err2 := strconv.Atoi(portRange[1])
+
+	if err1 != nil || err2 != nil {
+		log.Fatalf("invalid port format: %v\t%v\terrors: %v\t%v\n", lower, upper, err1, err2)
+		return nil, err1, err2
+	}
+
+	var ports []int
+
+	for i := lower; i <= upper; i++ {
+		ports = append(ports, i)
+	}
+
+	fmt.Printf("parsingPortRange: %v\n", ports)
+	return ports, nil, nil
+}
+
+// handlePorts is the wrapper function for the different inputs for the -p flag
 func handlePorts(p string) ([]int, error) {
+	fmt.Printf("handlePorts: %v\n", p)
 
 	return nil, nil
 }
 
+// handleModes handles modes...
 func handleModes(m string) {
+	fmt.Printf("handleModes: %v\n", m)
 
 }
 
+// handleTarget handles the target, if a URL is passed, the URL is resolved into an IPv4 address
 func handleTarget(t string) {
+	fmt.Printf("handleTarget: %v\n", t)
 
 }
