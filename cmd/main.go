@@ -36,11 +36,17 @@ func main() {
 				Value: "",
 				Usage: "target",
 			},
+			&cli.StringFlag{
+				Name:  "I",
+				Value: "",
+				Usage: "Interface to use",
+			},
 		},
 		Action: func(cCtx *cli.Context) error {
 			var target net.IP
 			var ports []int
 			var mode string
+			var iface string
 			if cCtx.String("ip") == "" {
 				return cli.Exit("Target must be specified!", 1)
 			} else {
@@ -64,7 +70,13 @@ func main() {
 			} else {
 				mode = parsedMode
 			}
-			scn.Scan(target, ports, mode)
+
+			if cCtx.String("I") == "" {
+				log.Fatalf("You need to specify the interface you wish to use!")
+			} else {
+				iface = cCtx.String("I")
+			}
+			scn.Scan(target, ports, mode, iface)
 			return nil
 		},
 	}
