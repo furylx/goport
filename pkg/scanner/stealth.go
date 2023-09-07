@@ -1,9 +1,8 @@
 package scanner
 
 import (
-	"fmt"
+	"log"
 	"net"
-	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -14,8 +13,34 @@ const (
 	snaplen int32 = 1600
 )
 
-func InitiateStealthScan(t net.IP, p []int) {
+type StealthListener struct {
+	iface string
+	mode  string
+}
 
+func (s *StealthListener) Start(i string, m string, h *pcap.Handle, c chan bool) {
+	packetSource := gopacket.NewPacketSource(h, h.LinkType())
+	for {
+		select {
+		case packet := <-packetSource.Packets():
+			handleResponse(packet, m)
+		case <-c:
+			return
+		}
+	}
+}
+
+func (s *StealthListener) Stop(c chan bool) {
+	c <- false
+}
+
+func InitiateStealthScan(t net.IP, p []int, h *pcap.Handle) {
+	for _, port := range p {
+		err := h.WritePacketData(craftSynPacket(t, port))
+		if err != nil {
+			log.Fatalf("<InitiateStealthScan> error sending out packet: %v\n", err)
+		}
+	}
 }
 
 func craftSynPacket(t net.IP, p int) []byte {
@@ -34,23 +59,22 @@ func craftSynPacket(t net.IP, p int) []byte {
 	return packetData
 }
 
-func sendPacket(t net.IP, p []byte, iface string) error {
-	handle, err := pcap.OpenLive(iface, snaplen, false, time.Second*10)
-	if err != nil {
-		return fmt.Errorf("<sendPacket> error creating handle: %v", err)
+// func sendPacket(t net.IP, p []byte, iface string) error {}
+
+func handleResponse(p gopacket.Packet, m string) map[int]string {
+	// out := make(map[int]string)
+	switch m {
+	case "stealth":
+		ipv4Layer := p.Layer(layers.LayerTypeIPv4)
+		if ipv4Layer != nil {
+			ipv4, _ := ipv4Layer.(*layers.IPv4) // Type assertion to get the actual IPv4 layer type
+		}
+		tcpLayer := p.Layer(layers.LayerTypeTCP)
+		if tcpLayer != nil {
+			tcp, _ := tcpLayer.(*layers.TCP)
+		}
+		// check for response according to stealth scan
 	}
-	defer handle.Close()
-	err = handle.WritePacketData(p)
-	if err != nil {
-		return fmt.Errorf("<sendPacket> error writing packet data: %v", err)
-	}
+
 	return nil
-}
-
-func listenForResponse(t net.IP, p int) {
-
-}
-
-func handleResponse(r string) {
-
 }
