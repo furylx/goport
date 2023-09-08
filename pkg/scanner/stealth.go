@@ -49,36 +49,49 @@ func InitiateStealthScan(t net.IP, p []int, h *pcap.Handle) {
 	for _, port := range p {
 		packet := craftSynPacket(t, port)
 		fmt.Println("THE PACKET: ", packet)
-		testing(packet)
-		// err := h.WritePacketData(packet)
-		// fmt.Println("Packets out!! ", err)
-		// if err != nil {
-		// 	log.Fatalf("<InitiateStealthScan> error sending out packet: %v\n", err)
-		// }
+		err := h.WritePacketData(packet)
+		fmt.Println("Packets out!! ", err)
+		if err != nil {
+			log.Fatalf("<InitiateStealthScan> error sending out packet: %v\n", err)
+		}
 	}
 }
 
 func craftSynPacket(t net.IP, p int) []byte {
 	buf := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{}
-	gopacket.SerializeLayers(buf, opts,
-		&layers.IPv4{
-			DstIP:    t,
-			SrcIP:    net.IPv4(10, 1, 1, 27),
-			Protocol: layers.IPProtocolTCP,
-		},
-		&layers.TCP{
-			DstPort: layers.TCPPort(p),
-			SrcPort: layers.TCPPort(35000),
-			SYN:     true,
-			Seq:     uint32(rand.Int31()),
-		})
+	opts := gopacket.SerializeOptions{
+		ComputeChecksums: true,
+	}
+	eth := layers.Ethernet{
+		SrcMAC:       net.HardwareAddr{0x64, 0x4b, 0xf0, 0x38, 0x09, 0xa4},
+		DstMAC:       net.HardwareAddr{0xda, 0xac, 0xc3, 0xcd, 0x5f, 0x97},
+		EthernetType: layers.EthernetTypeIPv4,
+	}
+	ip := layers.IPv4{
+		Version:  4,
+		IHL:      5,
+		TTL:      64,
+		Flags:    layers.IPv4DontFragment,
+		Id:       uint16(rand.Uint32()),
+		DstIP:    t,
+		SrcIP:    net.IPv4(10, 1, 1, 27),
+		Protocol: layers.IPProtocolTCP,
+		Length:   40,
+	}
+	tcp := layers.TCP{
+		Window:     14600,
+		DstPort:    layers.TCPPort(p),
+		SrcPort:    layers.TCPPort(20000 + rand.Intn(45535)),
+		SYN:        true,
+		Seq:        uint32(rand.Int31()),
+		DataOffset: 5,
+	}
+	tcp.SetNetworkLayerForChecksum(&ip)
+	gopacket.SerializeLayers(buf, opts, &eth, &ip, &tcp)
 	packetData := buf.Bytes()
-	fmt.Println("Crafting packet: ", packetData)
+
 	return packetData
 }
-
-// func sendPacket(t net.IP, p []byte, iface string) error {}
 
 func handleResponse(p gopacket.Packet, m string, t net.IP) map[int]string {
 	// out := make(map[int]string)

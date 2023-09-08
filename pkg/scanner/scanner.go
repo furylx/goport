@@ -38,10 +38,6 @@ func Scan(t net.IP, p []int, m string, iface string) {
 		log.Fatalf("<Scan> error creating handle: %v", err)
 	}
 	defer handle.Close()
-	// err = handle.WritePacketData(p)
-	// if err != nil {
-	// 	return fmt.Errorf("<sendPacket> error writing packet data: %v", err)
-	// }
 
 	switch m {
 	case "stealth":
