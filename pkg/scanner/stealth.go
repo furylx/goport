@@ -64,7 +64,7 @@ func craftSynPacket(t net.IP, p int) []byte {
 	}
 	eth := layers.Ethernet{
 		SrcMAC:       net.HardwareAddr{0x64, 0x4b, 0xf0, 0x38, 0x09, 0xa4},
-		DstMAC:       net.HardwareAddr{0xda, 0xac, 0xc3, 0xcd, 0x5f, 0x97},
+		DstMAC:       net.HardwareAddr{0x7c, 0xff, 0x4d, 0x62, 0x31, 0xbc},
 		EthernetType: layers.EthernetTypeIPv4,
 	}
 	ip := layers.IPv4{
@@ -103,7 +103,7 @@ func handleResponse(p gopacket.Packet, m string, t net.IP) map[int]string {
 			if ipv4.DstIP.Equal(t) {
 				fmt.Printf("<handleResponse ipv4: %v\t%v\t%v>\n", ipv4.SrcIP, ipv4.DstIP, t)
 			}
-			fmt.Printf("%v\t%v\n", ipv4.DstIP, ipv4.SrcIP)
+			// fmt.Printf("%v\t%v\n", ipv4.DstIP, ipv4.SrcIP)
 		}
 		// tcpLayer := p.Layer(layers.LayerTypeTCP)
 		// if tcpLayer != nil {
