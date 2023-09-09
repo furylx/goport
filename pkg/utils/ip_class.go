@@ -6,6 +6,6 @@ import (
 )
 
 func IpClass(ip net.IP) bool {
-	addr := netip.AddrFrom16([16]byte(ip.To16()))
+	addr := netip.AddrFrom4([4]byte(ip.To4()))
 	return addr.IsPrivate()
 }

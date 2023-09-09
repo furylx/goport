@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/gopacket/pcap"
+	"github.com/jackpal/gateway"
 )
 
 var (
@@ -19,7 +20,7 @@ var (
 // Scan creates the handle to send and receive the packets, initiates the right scan mode and closes the handle and the listener when done
 func Scan(t net.IP, p []int, m string, iface string) {
 	fmt.Printf("Target: %v\nPorts: %v\nMode: %v\nInterface: %v\n", t, p, m, iface)
-	utils.DetermineLocalGateway()
+	fmt.Printf("############################\n%v\n", dstMAC(iface, t))
 	// creating channel to close the listener
 	stopCh := make(chan bool)
 	// openhandle
@@ -63,4 +64,28 @@ func Scan(t net.IP, p []int, m string, iface string) {
 type ScanListener interface {
 	Start(i string, m string, h *pcap.Handle, c chan bool, t net.IP)
 	Stop(c chan bool)
+}
+
+func dstMAC(i string, t net.IP) net.HardwareAddr {
+	var gatewayMAC net.HardwareAddr = nil
+	localip, err := utils.GetLocalIp(i)
+	if err != nil {
+		log.Fatalf("<dstMAC>Could not determine local IP")
+	}
+	if utils.IpClass(t) {
+		fmt.Println("Private IP: ", t)
+		gateway, err := gateway.DiscoverGateway()
+		if err != nil {
+			log.Fatalf("<dstMAC>Could not get local gateway IP\t%v", err)
+		}
+		fmt.Printf("gateway ip: >%v<\n", gateway)
+		gatewayMAC, err = utils.GetMac(gateway, i)
+		if err != nil {
+			log.Fatalf("<dstMAC>Could not get gateway MAC \t%v", err)
+		}
+	} else {
+		fmt.Println("Public IP: ", t)
+		utils.GetMac(localip, i)
+	}
+	return gatewayMAC
 }
