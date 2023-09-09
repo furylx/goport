@@ -48,9 +48,7 @@ func InitiateStealthScan(t net.IP, p []int, h *pcap.Handle) {
 	fmt.Println("Initiating stealth scan...")
 	for _, port := range p {
 		packet := craftSynPacket(t, port)
-		fmt.Println("THE PACKET: ", packet)
 		err := h.WritePacketData(packet)
-		fmt.Println("Packets out!! ", err)
 		if err != nil {
 			log.Fatalf("<InitiateStealthScan> error sending out packet: %v\n", err)
 		}
@@ -64,7 +62,7 @@ func craftSynPacket(t net.IP, p int) []byte {
 	}
 	eth := layers.Ethernet{
 		SrcMAC:       net.HardwareAddr{0x64, 0x4b, 0xf0, 0x38, 0x09, 0xa4},
-		DstMAC:       net.HardwareAddr{0x7c, 0xff, 0x4d, 0x62, 0x31, 0xbc},
+		DstMAC:       net.HardwareAddr{0xda, 0xac, 0xc3, 0xcd, 0x5f, 0x97},
 		EthernetType: layers.EthernetTypeIPv4,
 	}
 	ip := layers.IPv4{
@@ -116,14 +114,14 @@ func handleResponse(p gopacket.Packet, m string, t net.IP) map[int]string {
 	return nil
 }
 
-func testing(p []byte) {
-	conn, err := net.Dial("ip4:tcp", "10.1.1.35")
-	if err != nil {
-		log.Fatal(err)
-	}
-	_, err = conn.Write(p)
-	if err != nil {
-		log.Fatal(err)
-	}
+// func testing(p []byte) {
+// 	conn, err := net.Dial("ip4:tcp", "10.1.1.35")
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	_, err = conn.Write(p)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
 
-}
+// }

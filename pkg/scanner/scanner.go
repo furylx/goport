@@ -2,6 +2,7 @@ package scanner
 
 import (
 	"fmt"
+	"goport/pkg/utils"
 	"log"
 	"net"
 	"sync"
@@ -15,20 +16,10 @@ var (
 	wg       sync.WaitGroup
 )
 
-// func getLocalIp(i string) []net.Addr {
-// 	localIface, err := net.InterfaceByName(i)
-// 	localIp, err := localIface.Addrs()
-// 	if err != nil {
-// 		log.Fatalf("<getLocalIp> Could not retrieve ip address of the specified interface: %v\t error: %v\n", i, err)
-// 	}
-// 	fmt.Println("<getLocalIp>: ", localIp)
-// 	return localIp
-// }
-
 // Scan creates the handle to send and receive the packets, initiates the right scan mode and closes the handle and the listener when done
 func Scan(t net.IP, p []int, m string, iface string) {
 	fmt.Printf("Target: %v\nPorts: %v\nMode: %v\nInterface: %v\n", t, p, m, iface)
-
+	utils.DetermineLocalGateway()
 	// creating channel to close the listener
 	stopCh := make(chan bool)
 	// openhandle
