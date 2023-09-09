@@ -8,3 +8,7 @@
   - get mac from target and set as dst
 - for stuff in the internet
   - get mac from local gateway and set as dst
+
+## long term
+
+make it better xD
