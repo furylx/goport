@@ -12,10 +12,6 @@ import (
 	"github.com/google/gopacket/pcap"
 )
 
-const (
-	snaplen int32 = 1600
-)
-
 type StealthListener struct {
 	iface string
 	mode  string

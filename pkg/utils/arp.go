@@ -2,29 +2,72 @@ package utils
 
 import (
 	"fmt"
+	"log"
 	"net"
-	"net/netip"
+	"time"
 
-	"github.com/mdlayher/arp"
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
 )
 
 func GetMac(ip net.IP, i string) (net.HardwareAddr, error) {
-	iface, err := net.InterfaceByName(i)
+	handle, err := pcap.OpenLive(i, 1600, true, (10 * time.Second))
 	if err != nil {
-		return nil, fmt.Errorf("<getMac>Could not find interface %s : %v\n", i, err)
+		log.Fatalf("Unable to open handle for ARP request: %v", err)
 	}
+	defer handle.Close()
 
-	client, err := arp.Dial(iface)
-	if err != nil {
-		return nil, fmt.Errorf("<getMac>Could not dial for interface %s : %v\n", i, err)
+	arpPacket := craftArpPacket()
+
+	handle.WritePacketData(arpPacket)
+
+	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+	timeout := time.After(10 * time.Second)
+
+	for {
+		select {
+		case packet := <-packetSource.Packets():
+			arpLayer := packet.Layer(layers.LayerTypeARP)
+			if arpLayer != nil {
+				arpReply, _ := arpLayer.(*layers.ARP)
+				if arpReply.Operation == layers.ARPReply && net.IP(arpReply.SourceProtAddress).Equal(ip) {
+					handle.Close()
+					return arpReply.SourceHwAddress, nil
+				}
+			}
+		case <-timeout:
+			handle.Close()
+			return nil, fmt.Errorf("ARP request timed out")
+		}
+
 	}
+}
 
-	defer client.Close()
-	addr := netip.AddrFrom16([16]byte(ip.To16()))
-	mac, err := client.Resolve(addr)
-	if err != nil {
-		return nil, fmt.Errorf("<getMac>Could not resolve IP %s : %v\n", ip, err)
+func craftArpPacket() []byte {
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{
+		ComputeChecksums: true,
+		FixLengths:       true,
 	}
+	eth := layers.Ethernet{
+		SrcMAC:       net.HardwareAddr{0x64, 0x4b, 0xf0, 0x38, 0x09, 0xa4},
+		DstMAC:       net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+		EthernetType: layers.EthernetTypeARP,
+	}
+	arp := layers.ARP{
+		AddrType:          layers.LinkTypeEthernet,
+		Protocol:          layers.EthernetTypeIPv4,
+		HwAddressSize:     6,
+		ProtAddressSize:   4,
+		Operation:         layers.ARPRequest,
+		SourceProtAddress: []byte{10, 1, 1, 27},
+		DstProtAddress:    []byte{10, 1, 1, 1},
+		DstHwAddress:      []byte{0, 0, 0, 0, 0, 0},
+		SourceHwAddress:   net.HardwareAddr{0x64, 0x4b, 0xf0, 0x38, 0x09, 0xa4},
+	}
+	gopacket.SerializeLayers(buf, opts, &eth, &arp)
+	packetData := buf.Bytes()
 
-	return mac, nil
+	return packetData
 }

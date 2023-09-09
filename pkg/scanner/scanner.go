@@ -12,6 +12,10 @@ import (
 	"github.com/jackpal/gateway"
 )
 
+const (
+	snaplen int32 = 1600
+)
+
 var (
 	listener ScanListener
 	wg       sync.WaitGroup
