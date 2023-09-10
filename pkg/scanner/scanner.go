@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/google/gopacket/pcap"
-	"github.com/jackpal/gateway"
 )
 
 const (
@@ -24,12 +23,14 @@ var (
 // Scan creates the handle to send and receive the packets, initiates the right scan mode and closes the handle and the listener when done
 func Scan(t net.IP, p []int, m string, iface string) {
 	fmt.Printf("Target: %v\nPorts: %v\nMode: %v\nInterface: %v\n", t, p, m, iface)
-	fmt.Printf("############################\n%v\n", dstMAC(iface, t))
+
+	locMAC, locIP, tarMAC := collector(iface, t)
+
 	// creating channel to close the listener
 	stopCh := make(chan bool)
 	// openhandle
 	// defer handle.close
-	handle, err := pcap.OpenLive(iface, snaplen, false, time.Second*10)
+	handle, err := pcap.OpenLive(iface, snaplen, false, 1*time.Millisecond)
 	if err != nil {
 		log.Fatalf("<Scan> error creating handle: %v", err)
 	}
@@ -45,7 +46,7 @@ func Scan(t net.IP, p []int, m string, iface string) {
 		wg.Add(1)
 		go listener.Start(iface, m, handle, stopCh, t)
 		// loop over ports and send packets via handle
-		InitiateStealthScan(t, p, handle)
+		InitiateStealthScan(t, p, handle, locMAC, tarMAC, locIP)
 		wg.Wait()
 	case "speed":
 		// start listener (pass mode into listener) in goroutine
@@ -70,26 +71,16 @@ type ScanListener interface {
 	Stop(c chan bool)
 }
 
-func dstMAC(i string, t net.IP) net.HardwareAddr {
-	var gatewayMAC net.HardwareAddr = nil
-	localip, err := utils.GetLocalIp(i)
+// collector gathers all necessary values to prevent querying stuff mutliple times (local ip, local mac, target mac which depends on the target ip class)
+func collector(i string, t net.IP) (net.IP, net.HardwareAddr, net.HardwareAddr) {
+
+	localIP, err := utils.GetLocalIp(i)
 	if err != nil {
-		log.Fatalf("<dstMAC>Could not determine local IP")
+		log.Fatalf("<collector>%v", err)
 	}
-	if utils.IpClass(t) {
-		fmt.Println("Private IP: ", t)
-		gateway, err := gateway.DiscoverGateway()
-		if err != nil {
-			log.Fatalf("<dstMAC>Could not get local gateway IP\t%v", err)
-		}
-		fmt.Printf("gateway ip: >%v<\n", gateway)
-		gatewayMAC, err = utils.GetMac(gateway, i)
-		if err != nil {
-			log.Fatalf("<dstMAC>Could not get gateway MAC \t%v", err)
-		}
-	} else {
-		fmt.Println("Public IP: ", t)
-		utils.GetMac(localip, i)
-	}
-	return gatewayMAC
+	localMAC := utils.GetLocalMAC(i)
+
+	targetMAC := utils.DstMAC(i, t, localIP, localMAC)
+
+	return localIP, localMAC, targetMAC
 }

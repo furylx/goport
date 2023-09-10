@@ -22,3 +22,11 @@ func GetLocalIp(i string) (net.IP, error) {
 	}
 	return nil, fmt.Errorf("<GetLocalIp>Could not determine local ip address")
 }
+
+func GetLocalMAC(i string) net.HardwareAddr {
+	intf, err := net.InterfaceByName(i)
+	if err != nil {
+		log.Fatalf("<GetLocalMAC>Could not process interface: %v\n", err)
+	}
+	return intf.HardwareAddr
+}

@@ -11,14 +11,15 @@ import (
 	"github.com/google/gopacket/pcap"
 )
 
-func GetMac(ip net.IP, i string) (net.HardwareAddr, error) {
-	handle, err := pcap.OpenLive(i, 1600, true, (10 * time.Second))
+func GetMac(ip net.IP, i string, locIP net.IP, locMAC net.HardwareAddr) (net.HardwareAddr, error) {
+
+	handle, err := pcap.OpenLive(i, 1600, true, (100 * time.Microsecond))
 	if err != nil {
 		log.Fatalf("Unable to open handle for ARP request: %v", err)
 	}
 	defer handle.Close()
 
-	arpPacket := craftArpPacket()
+	arpPacket := craftArpPacket(locMAC, ip.To4(), locIP.To4())
 
 	handle.WritePacketData(arpPacket)
 
@@ -44,14 +45,14 @@ func GetMac(ip net.IP, i string) (net.HardwareAddr, error) {
 	}
 }
 
-func craftArpPacket() []byte {
+func craftArpPacket(locM net.HardwareAddr, tarIP []byte, locIP []byte) []byte {
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{
 		ComputeChecksums: true,
 		FixLengths:       true,
 	}
 	eth := layers.Ethernet{
-		SrcMAC:       net.HardwareAddr{0x64, 0x4b, 0xf0, 0x38, 0x09, 0xa4},
+		SrcMAC:       locM,
 		DstMAC:       net.HardwareAddr{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 		EthernetType: layers.EthernetTypeARP,
 	}
@@ -61,10 +62,10 @@ func craftArpPacket() []byte {
 		HwAddressSize:     6,
 		ProtAddressSize:   4,
 		Operation:         layers.ARPRequest,
-		SourceProtAddress: []byte{10, 1, 1, 27},
-		DstProtAddress:    []byte{10, 1, 1, 1},
+		SourceProtAddress: locIP,
+		DstProtAddress:    tarIP,
 		DstHwAddress:      []byte{0, 0, 0, 0, 0, 0},
-		SourceHwAddress:   net.HardwareAddr{0x64, 0x4b, 0xf0, 0x38, 0x09, 0xa4},
+		SourceHwAddress:   locM,
 	}
 	gopacket.SerializeLayers(buf, opts, &eth, &arp)
 	packetData := buf.Bytes()

@@ -5,7 +5,6 @@ import (
 	"log"
 	"math/rand"
 	"net"
-	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -20,8 +19,6 @@ type StealthListener struct {
 func (s *StealthListener) Start(i string, m string, h *pcap.Handle, c chan bool, t net.IP) {
 	defer wg.Done()
 	packetSource := gopacket.NewPacketSource(h, h.LinkType())
-	fmt.Println("Stealth listener starting...", packetSource.Packets())
-	time.Sleep(time.Second * 5)
 	for {
 		select {
 		case packet := <-packetSource.Packets():
@@ -40,10 +37,10 @@ func (s *StealthListener) Stop(c chan bool) {
 	c <- false
 }
 
-func InitiateStealthScan(t net.IP, p []int, h *pcap.Handle) {
+func InitiateStealthScan(t net.IP, p []int, h *pcap.Handle, locIP net.IP, locMAC net.HardwareAddr, tarMAC net.HardwareAddr) {
 	fmt.Println("Initiating stealth scan...")
 	for _, port := range p {
-		packet := craftSynPacket(t, port)
+		packet := craftSynPacket(t, port, locMAC, tarMAC, locIP)
 		err := h.WritePacketData(packet)
 		if err != nil {
 			log.Fatalf("<InitiateStealthScan> error sending out packet: %v\n", err)
@@ -51,14 +48,14 @@ func InitiateStealthScan(t net.IP, p []int, h *pcap.Handle) {
 	}
 }
 
-func craftSynPacket(t net.IP, p int) []byte {
+func craftSynPacket(t net.IP, p int, locMac net.HardwareAddr, tarMac net.HardwareAddr, locIP net.IP) []byte {
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{
 		ComputeChecksums: true,
 	}
 	eth := layers.Ethernet{
-		SrcMAC:       net.HardwareAddr{0x64, 0x4b, 0xf0, 0x38, 0x09, 0xa4},
-		DstMAC:       net.HardwareAddr{0xda, 0xac, 0xc3, 0xcd, 0x5f, 0x97},
+		SrcMAC:       locMac,
+		DstMAC:       tarMac,
 		EthernetType: layers.EthernetTypeIPv4,
 	}
 	ip := layers.IPv4{
@@ -68,7 +65,7 @@ func craftSynPacket(t net.IP, p int) []byte {
 		Flags:    layers.IPv4DontFragment,
 		Id:       uint16(rand.Uint32()),
 		DstIP:    t,
-		SrcIP:    net.IPv4(10, 1, 1, 27),
+		SrcIP:    locIP,
 		Protocol: layers.IPProtocolTCP,
 		Length:   40,
 	}
