@@ -22,15 +22,18 @@ var (
 
 // Scan creates the handle to send and receive the packets, initiates the right scan mode and closes the handle and the listener when done
 func Scan(t net.IP, p []int, m string, iface string) {
-	fmt.Printf("Target: %v\nPorts: %v\nMode: %v\nInterface: %v\n", t, p, m, iface)
+	// fmt.Printf("Target: %v\nPorts: %v\nMode: %v\nInterface: %v\n", t, p, m, iface)
 
-	locMAC, locIP, tarMAC := collector(iface, t)
+	locIP, locMAC, tarMAC := collector(iface, t)
+
+	fmt.Println("locMAC: ", locMAC)
+	fmt.Println("tarMAC: ", tarMAC)
 
 	// creating channel to close the listener
 	stopCh := make(chan bool)
 	// openhandle
 	// defer handle.close
-	handle, err := pcap.OpenLive(iface, snaplen, false, 1*time.Millisecond)
+	handle, err := pcap.OpenLive(iface, snaplen, false, 1*time.Second)
 	if err != nil {
 		log.Fatalf("<Scan> error creating handle: %v", err)
 	}
@@ -46,7 +49,7 @@ func Scan(t net.IP, p []int, m string, iface string) {
 		wg.Add(1)
 		go listener.Start(iface, m, handle, stopCh, t)
 		// loop over ports and send packets via handle
-		InitiateStealthScan(t, p, handle, locMAC, tarMAC, locIP)
+		InitiateStealthScan(t, p, handle, locIP, locMAC, tarMAC)
 		wg.Wait()
 	case "speed":
 		// start listener (pass mode into listener) in goroutine

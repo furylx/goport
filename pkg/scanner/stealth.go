@@ -16,6 +16,14 @@ type StealthListener struct {
 	mode  string
 }
 
+type PortInfo struct {
+	port    int
+	status  string
+	service string
+}
+
+var scannedPorts []PortInfo
+
 func (s *StealthListener) Start(i string, m string, h *pcap.Handle, c chan bool, t net.IP) {
 	defer wg.Done()
 	packetSource := gopacket.NewPacketSource(h, h.LinkType())
@@ -45,6 +53,11 @@ func InitiateStealthScan(t net.IP, p []int, h *pcap.Handle, locIP net.IP, locMAC
 		if err != nil {
 			log.Fatalf("<InitiateStealthScan> error sending out packet: %v\n", err)
 		}
+		packet2 := craftSynPacket(t, port, locMAC, tarMAC, locIP)
+		err = h.WritePacketData(packet2)
+		if err != nil {
+			log.Fatalf("<InitiateStealthScan> error sending out packet: %v\n", err)
+		}
 	}
 }
 
@@ -70,11 +83,11 @@ func craftSynPacket(t net.IP, p int, locMac net.HardwareAddr, tarMac net.Hardwar
 		Length:   40,
 	}
 	tcp := layers.TCP{
-		Window:     14600,
+		Window:     64240,
 		DstPort:    layers.TCPPort(p),
 		SrcPort:    layers.TCPPort(20000 + rand.Intn(45535)),
 		SYN:        true,
-		Seq:        uint32(rand.Int31()),
+		Seq:        0, //uint32(rand.Int31()),
 		DataOffset: 5,
 	}
 	tcp.SetNetworkLayerForChecksum(&ip)
@@ -91,30 +104,18 @@ func handleResponse(p gopacket.Packet, m string, t net.IP) map[int]string {
 		ipv4Layer := p.Layer(layers.LayerTypeIPv4)
 		if ipv4Layer != nil {
 			ipv4, _ := ipv4Layer.(*layers.IPv4) // Type assertion to get the actual IPv4 layer type
-			if ipv4.DstIP.Equal(t) {
-				fmt.Printf("<handleResponse ipv4: %v\t%v\t%v>\n", ipv4.SrcIP, ipv4.DstIP, t)
-			}
-			// fmt.Printf("%v\t%v\n", ipv4.DstIP, ipv4.SrcIP)
-		}
-		// tcpLayer := p.Layer(layers.LayerTypeTCP)
-		// if tcpLayer != nil {
-		// 	tcp, _ := tcpLayer.(*layers.TCP)
-		// 	fmt.Printf("<handleResponse : %v>\n", tcp)
-		// }
-		// check for response according to stealth scan
-	}
+			if ipv4.SrcIP.Equal(t) {
+				// fmt.Printf("<handleResponse> SrcIP: %v\tDstIP: %v\n", ipv4.SrcIP, ipv4.DstIP)
 
+				tcpLayer := p.Layer(layers.LayerTypeTCP)
+				if tcpLayer != nil {
+					tcp, _ := tcpLayer.(*layers.TCP)
+					if tcp.SYN && tcp.ACK {
+						fmt.Printf("<handleResponse : %v>\n", tcp.SrcPort)
+					}
+				}
+			}
+		}
+	}
 	return nil
 }
-
-// func testing(p []byte) {
-// 	conn, err := net.Dial("ip4:tcp", "10.1.1.35")
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	_, err = conn.Write(p)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// }

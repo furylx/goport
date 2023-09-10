@@ -13,7 +13,7 @@ import (
 
 func GetMac(ip net.IP, i string, locIP net.IP, locMAC net.HardwareAddr) (net.HardwareAddr, error) {
 
-	handle, err := pcap.OpenLive(i, 1600, true, (100 * time.Microsecond))
+	handle, err := pcap.OpenLive(i, 1600, true, (10 * time.Millisecond))
 	if err != nil {
 		log.Fatalf("Unable to open handle for ARP request: %v", err)
 	}
@@ -24,7 +24,7 @@ func GetMac(ip net.IP, i string, locIP net.IP, locMAC net.HardwareAddr) (net.Har
 	handle.WritePacketData(arpPacket)
 
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-	timeout := time.After(10 * time.Second)
+	timeout := time.After(2 * time.Second)
 
 	for {
 		select {
