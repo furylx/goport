@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -16,6 +17,7 @@ import (
 )
 
 func main() {
+
 	start := time.Now()
 	app := &cli.App{
 		Name:  "goport",
@@ -23,8 +25,8 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:  "p",
-				Value: "1-1024",
-				Usage: "-p 22,80 or -p 22 for specific ports // -p 22-443 for ranges // -p - for all ports // omitting -p scans the first 1024 ports",
+				Value: "default",
+				Usage: "-p 22,80 or -p 22 for specific ports // -p 22-443 for ranges // -p - for all ports // omitting -p scans the 1000 most used ports",
 			},
 			&cli.StringFlag{
 				Name:  "mode",
@@ -86,6 +88,7 @@ func main() {
 		log.Fatalf("Problem running arguments: %v\nos.Args: %v\n", err, os.Args)
 	}
 	fmt.Println("Time taken since start: ", time.Since(start))
+
 }
 
 // parseSinglePort extracts the port from the string, checks for errors, if none it returns the port as in
@@ -141,11 +144,14 @@ func parsePortRange(p string) ([]int, error) {
 func handlePorts(p string) ([]int, error) {
 	var ports []int
 	// All ports or default case
-	if p == "1-1024" {
-		parsedPorts, err := parsePortRange(p)
-		ports = append(ports, parsedPorts...)
+	if p == "default" {
+		j, err := os.ReadFile("../data/ports.json")
 		if err != nil {
-			return nil, fmt.Errorf("<handlePorts> error during default case: %v\terror: %v\n", p, err)
+			log.Fatalf("<handlePorts>Error reading ports file: %v", err)
+		}
+		err = json.Unmarshal(j, &ports)
+		if err != nil {
+			log.Fatalf("<handlePorts> Error unmarshalling json: %v", err)
 		}
 		return ports, nil
 	} else if p == "-" {

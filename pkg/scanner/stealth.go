@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -48,6 +49,7 @@ func (s *StealthListener) Stop(c chan bool) {
 func InitiateStealthScan(t net.IP, p []int, h *pcap.Handle, locIP net.IP, locMAC net.HardwareAddr, tarMAC net.HardwareAddr) {
 	fmt.Println("Initiating stealth scan...")
 	for _, port := range p {
+		time.Sleep(800 * time.Microsecond)
 		packet := craftSynPacket(t, port, locMAC, tarMAC, locIP)
 		err := h.WritePacketData(packet)
 		if err != nil {
