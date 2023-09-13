@@ -5,9 +5,12 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
@@ -16,7 +19,7 @@ import (
 type StealthListener struct{}
 
 type PortInfo struct {
-	port    string
+	port    int
 	status  string
 	service string
 }
@@ -39,7 +42,6 @@ func (s *StealthListener) Start(i string, m string, h *pcap.Handle, c chan bool,
 			}
 
 		case <-ticker.C:
-			fmt.Println("Time is up!")
 			doneCh <- true
 			return
 		}
@@ -54,6 +56,7 @@ func (s *StealthListener) Stop(c chan bool) {
 
 func InitiateStealthScan(t net.IP, p []int, h *pcap.Handle, locIP net.IP, locMAC net.HardwareAddr, tarMAC net.HardwareAddr) {
 	fmt.Println("Initiating stealth scan...")
+	fmt.Println("Target IP: ", t)
 	for _, port := range p {
 		time.Sleep(800 * time.Microsecond)
 		packet := craftSynPacket(t, port, locMAC, tarMAC, locIP)
@@ -130,7 +133,7 @@ func handleResponse(p gopacket.Packet, m string, t net.IP, oc chan string, cc ch
 }
 
 func openProcessor(c chan string, doneCh chan bool) {
-	result := make(map[string]PortInfo)
+	result := make(map[int]PortInfo)
 	for {
 		select {
 		case port := <-c:
@@ -141,19 +144,31 @@ func openProcessor(c chan string, doneCh chan bool) {
 			if len(x) >= 2 {
 				pI.service = strings.Replace(x[1], ")", "", 1)
 			}
-			pI.port = x[0]
+			var err error
+			pI.port, err = strconv.Atoi(x[0])
+			if err != nil {
+				log.Fatalf("<openProcessor> Could not convert portstring to int")
+			}
 			result[pI.port] = pI
 		case <-doneCh:
-			fmt.Println("RESULTS: ", result)
+			displayResults(result)
 			return
 		}
 	}
 }
 
-func closedProcessor(c chan string, p []byte) {
-	// for port := range c {
-	// 	x := strings.Split(port, "(")
+func displayResults(results map[int]PortInfo) {
+	keys := make([]int, 0, len(results))
+	for k := range results {
+		keys = append(keys, k)
+	}
+	sort.Ints(keys)
 
-	// }
+	yellow := color.New(color.FgYellow).SprintFunc()
+	green := color.New(color.FgGreen).SprintFunc()
 
+	fmt.Printf("\n%s\t%s\t%s\n\n", yellow("PORT"), yellow("STATUS"), yellow("SERVICE"))
+	for _, k := range keys {
+		fmt.Printf("%s\t%s\t%s\n", green(results[k].port), green(results[k].status), green(results[k].service))
+	}
 }
