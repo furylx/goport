@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"log"
 	"net"
 
@@ -14,7 +13,6 @@ func DstMAC(i string, t net.IP, locIP net.IP, locMAC net.HardwareAddr) net.Hardw
 		if err != nil {
 			log.Fatalf("<dstMAC>Could not get local gateway IP\t%v", err)
 		}
-		fmt.Printf("gateway ip: >%v<\n", gateway)
 		destMAC, err := GetMac(gateway, i, locIP, locMAC)
 		if err != nil {
 			log.Fatalf("<dstMAC>Could not get gateway MAC \t%v", err)

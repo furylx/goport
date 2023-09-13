@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/google/gopacket"
@@ -12,30 +13,29 @@ import (
 	"github.com/google/gopacket/pcap"
 )
 
-type StealthListener struct {
-	iface string
-	mode  string
-}
+type StealthListener struct{}
 
 type PortInfo struct {
-	port    int
+	port    string
 	status  string
 	service string
 }
 
 var scannedPorts []PortInfo
 
-func (s *StealthListener) Start(i string, m string, h *pcap.Handle, c chan bool, t net.IP) {
+func (s *StealthListener) Start(i string, m string, h *pcap.Handle, c chan bool, t net.IP, oc chan string, cc chan string, doneCh chan bool) {
+	xx := time.NewTimer(2 * time.Second)
 	defer wg.Done()
+	go openProcessor(oc, doneCh)
 	packetSource := gopacket.NewPacketSource(h, h.LinkType())
 	for {
 		select {
 		case packet := <-packetSource.Packets():
 			if packet.Layer(layers.LayerTypeIPv4) != nil && packet.Layer(layers.LayerTypeTCP) != nil {
-				handleResponse(packet, m, t)
+				handleResponse(packet, m, t, oc, cc)
 			}
 
-		case <-c:
+		case <-xx.C:
 			return
 		}
 	}
@@ -46,7 +46,7 @@ func (s *StealthListener) Stop(c chan bool) {
 	c <- false
 }
 
-func InitiateStealthScan(t net.IP, p []int, h *pcap.Handle, locIP net.IP, locMAC net.HardwareAddr, tarMAC net.HardwareAddr) {
+func InitiateStealthScan(t net.IP, p []int, h *pcap.Handle, locIP net.IP, locMAC net.HardwareAddr, tarMAC net.HardwareAddr, doneCh chan bool) {
 	fmt.Println("Initiating stealth scan...")
 	for _, port := range p {
 		time.Sleep(800 * time.Microsecond)
@@ -61,6 +61,8 @@ func InitiateStealthScan(t net.IP, p []int, h *pcap.Handle, locIP net.IP, locMAC
 			log.Fatalf("<InitiateStealthScan> error sending out packet: %v\n", err)
 		}
 	}
+	time.Sleep(2 * time.Second)
+	doneCh <- true
 }
 
 func craftSynPacket(t net.IP, p int, locMac net.HardwareAddr, tarMac net.HardwareAddr, locIP net.IP) []byte {
@@ -99,7 +101,7 @@ func craftSynPacket(t net.IP, p int, locMac net.HardwareAddr, tarMac net.Hardwar
 	return packetData
 }
 
-func handleResponse(p gopacket.Packet, m string, t net.IP) map[int]string {
+func handleResponse(p gopacket.Packet, m string, t net.IP, oc chan string, cc chan string) {
 	// out := make(map[int]string)
 	switch m {
 	case "stealth":
@@ -113,11 +115,44 @@ func handleResponse(p gopacket.Packet, m string, t net.IP) map[int]string {
 				if tcpLayer != nil {
 					tcp, _ := tcpLayer.(*layers.TCP)
 					if tcp.SYN && tcp.ACK {
-						fmt.Printf("<handleResponse : %v>\n", tcp.SrcPort)
+						oc <- tcp.SrcPort.String()
+						// fmt.Printf("<handleResponse>  %v\n", tcp.SrcPort.String())
 					}
+					// else if tcp.RST {
+					// 	//fmt.Printf("<handleResponse> was closed: %v\n", tcp.SrcPort.String())
+					// 	//cc <- tcp.SrcPort.String()
+					// }
 				}
 			}
 		}
 	}
-	return nil
+}
+
+func openProcessor(c chan string, doneCh chan bool) {
+	var result []PortInfo
+	for {
+		select {
+		case port := <-c:
+			pI := PortInfo{
+				status: "open",
+			}
+			x := strings.Split(port, "(")
+			if len(x) >= 2 {
+				pI.service = strings.Replace(x[1], ")", "", 1)
+			}
+			pI.port = x[0]
+			result = append(result, pI)
+		case <-doneCh:
+			fmt.Println("RESULTS: ", result)
+			return
+		}
+	}
+}
+
+func closedProcessor(c chan string, p []byte) {
+	// for port := range c {
+	// 	x := strings.Split(port, "(")
+
+	// }
+
 }

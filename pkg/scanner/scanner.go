@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"fmt"
 	"goport/pkg/utils"
 	"log"
 	"net"
@@ -26,13 +25,17 @@ func Scan(t net.IP, p []int, m string, iface string) {
 
 	locIP, locMAC, tarMAC := collector(iface, t)
 
-	fmt.Println("locMAC: ", locMAC)
-	fmt.Println("tarMAC: ", tarMAC)
-
 	// creating channel to close the listener
 	stopCh := make(chan bool)
+
+	// creating channels and buffer for the processing of the results
+	pLen := float32(len(p))
+	buffer := int((pLen * 0.03))
+	openCh := make(chan string, buffer)
+	closeCh := make(chan string, buffer*10)
+	doneCh := make(chan bool)
+
 	// openhandle
-	// defer handle.close
 	handle, err := pcap.OpenLive(iface, snaplen, false, 1*time.Second)
 	if err != nil {
 		log.Fatalf("<Scan> error creating handle: %v", err)
@@ -42,14 +45,11 @@ func Scan(t net.IP, p []int, m string, iface string) {
 	switch m {
 	case "stealth":
 		// start listener (pass mode into listener) in goroutine
-		listener = &StealthListener{
-			iface: iface,
-			mode:  m,
-		}
+		listener = &StealthListener{}
 		wg.Add(1)
-		go listener.Start(iface, m, handle, stopCh, t)
+		go listener.Start(iface, m, handle, stopCh, t, openCh, closeCh, doneCh)
 		// loop over ports and send packets via handle
-		InitiateStealthScan(t, p, handle, locIP, locMAC, tarMAC)
+		InitiateStealthScan(t, p, handle, locIP, locMAC, tarMAC, doneCh)
 		wg.Wait()
 	case "speed":
 		// start listener (pass mode into listener) in goroutine
@@ -60,17 +60,15 @@ func Scan(t net.IP, p []int, m string, iface string) {
 		// loop over ports and send packets via handle
 
 	}
-	fmt.Println("#########sleeping 10#########")
-	time.Sleep(time.Second * 10)
 
 	// stop listener
-	fmt.Println("calling stop")
-	listener.Stop(stopCh)
+	// fmt.Println("calling stop")
+	// listener.Stop(stopCh)
 }
 
 // ScanListener serves as interface to end all the different listeners depending on the mode
 type ScanListener interface {
-	Start(i string, m string, h *pcap.Handle, c chan bool, t net.IP)
+	Start(i string, m string, h *pcap.Handle, c chan bool, t net.IP, co chan string, cc chan string, cd chan bool)
 	Stop(c chan bool)
 }
 
