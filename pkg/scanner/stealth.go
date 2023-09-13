@@ -111,7 +111,7 @@ func handleResponse(p gopacket.Packet, m string, t net.IP, oc chan string, cc ch
 		ipv4, _ := ipv4Layer.(*layers.IPv4) // Type assertion to get the actual IPv4 layer type
 		if ipv4.SrcIP.Equal(t) {
 			// fmt.Printf("<handleResponse> SrcIP: %v\tDstIP: %v\n", ipv4.SrcIP, ipv4.DstIP)
-			ticker.Reset(1 * time.Second)
+			ticker.Reset(2000 * time.Millisecond)
 			tcpLayer := p.Layer(layers.LayerTypeTCP)
 			if tcpLayer != nil {
 				tcp, _ := tcpLayer.(*layers.TCP)
