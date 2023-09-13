@@ -17,8 +17,8 @@ import (
 )
 
 func main() {
-
 	start := time.Now()
+
 	app := &cli.App{
 		Name:  "goport",
 		Usage: "goport -ip <ipv4> | <url> -p <22> | <22-80> | <22,80,443> | <-> for ports, if omitted 1-1024 are scanned --mode=<stealth> | <speed> | <accuracy> stealth is default",
@@ -88,7 +88,6 @@ func main() {
 		log.Fatalf("Problem running arguments: %v\nos.Args: %v\n", err, os.Args)
 	}
 	fmt.Println("Time taken since start: ", time.Since(start))
-
 }
 
 // parseSinglePort extracts the port from the string, checks for errors, if none it returns the port as in

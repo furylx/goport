@@ -49,7 +49,7 @@ func Scan(t net.IP, p []int, m string, iface string) {
 		wg.Add(1)
 		go listener.Start(iface, m, handle, stopCh, t, openCh, closeCh, doneCh)
 		// loop over ports and send packets via handle
-		InitiateStealthScan(t, p, handle, locIP, locMAC, tarMAC, doneCh)
+		InitiateStealthScan(t, p, handle, locIP, locMAC, tarMAC)
 		wg.Wait()
 	case "speed":
 		// start listener (pass mode into listener) in goroutine
@@ -64,6 +64,7 @@ func Scan(t net.IP, p []int, m string, iface string) {
 	// stop listener
 	// fmt.Println("calling stop")
 	// listener.Stop(stopCh)
+
 }
 
 // ScanListener serves as interface to end all the different listeners depending on the mode
