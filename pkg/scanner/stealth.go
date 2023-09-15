@@ -137,7 +137,7 @@ func openProcessor(c chan string, doneCh chan bool) {
 	for {
 		select {
 		case port := <-c:
-			pI := PortInfo{
+			pI := &PortInfo{
 				status: "open",
 			}
 			x := strings.Split(port, "(")
@@ -149,7 +149,7 @@ func openProcessor(c chan string, doneCh chan bool) {
 			if err != nil {
 				log.Fatalf("<openProcessor> Could not convert portstring to int")
 			}
-			result[pI.port] = pI
+			result[pI.port] = *pI
 		case <-doneCh:
 			displayResults(result)
 			return

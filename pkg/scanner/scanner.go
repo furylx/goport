@@ -67,7 +67,7 @@ func Scan(t net.IP, p []int, m string, iface string) {
 
 }
 
-// ScanListener serves as interface to end all the different listeners depending on the mode
+// ScanListener serves as interface to end & start all the different listeners depending on the mode
 type ScanListener interface {
 	Start(i string, m string, h *pcap.Handle, c chan bool, t net.IP, co chan string, cc chan string, cd chan bool)
 	Stop(c chan bool)

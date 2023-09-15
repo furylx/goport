@@ -31,6 +31,7 @@ There is no service detection, but the "default" values as are used as they are 
 - udp scan
 - banner grabbing
 - automatically detecting interface and handling edge cases (e.g. loopback)
+- work on performance
 
 
 ## Disclaimer

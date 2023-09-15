@@ -87,7 +87,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Problem running arguments: %v\nos.Args: %v\n", err, os.Args)
 	}
-	fmt.Println("Time taken since start: ", time.Since(start))
+	fmt.Printf("\nTime taken since start: %v\n", time.Since(start))
 }
 
 // parseSinglePort extracts the port from the string, checks for errors, if none it returns the port as in
