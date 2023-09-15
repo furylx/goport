@@ -14,12 +14,12 @@ There is no service detection, but the "default" values as are used as they are 
 
 ***Mandatory Flags:***
 
--ip <target> (can be either url or ip)
--I specify the interface please
+- -ip <target> (can be either url or ip)
+- -I specify the interface please
 
 ***Optional Flags:***
 
--p Here you can single ports, ranges, or with -p - all ports (65k). If you omit -p, the 1000 most frequently used ports are used
+- -p Here you can single ports, ranges, or with -p - all ports (65k). If you omit -p, the 1000 most frequently used ports are used
 
 
 ## Todo
